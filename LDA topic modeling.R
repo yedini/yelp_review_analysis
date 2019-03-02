@@ -1,9 +1,9 @@
 library(tidyverse)
 rm(list=ls())
-setwd("C:/Users/dcng/Documents/��Ÿ��_������Ʈ")
+setwd("C:/Users/dcng/Documents/비타민_프로젝트")
 
 
-#===clustering ����� ���� business�� �з�=====
+#===clustering 결과에 따른 business열 분류=====
 review <- readRDS("review2.rds", refhook=NULL)
 business <- readRDS("business.rds", refhook=NULL)
 review <- review %>% select(review_id, business_id, text)
@@ -69,3 +69,40 @@ result <- FindTopicsNumber(
   verbose=TRUE
 )
 FindTopicsNumber_plot(result)
+                        
+                        
+####LDA####
+##cluster 1##
+#text organization
+library(pbapply)
+library(caret)
+library(tm)
+c1 <- review %>% inner_join(c1_business, by="business_id")
+num <- createDataPartition(c1$categories, p=0.015236795, list=FALSE)
+c1_1 <- c1[num,]
+text <- c1_1$text
+text <- gsub('\\\\n', '', text)
+text <-gsub('[[:punct:]]','',text)
+text <- text %>% removeNumbers() %>% tolower() %>% removeWords(c(stopwords('en'), 'food'))
+
+#문자 수가 1 이상인 것만 남기기
+blank.removal <- function(x) {
+  x <- unlist(strsplit(x, ' '))
+  x <- subset(x, nchar(x)>0)
+  x <- paste(x, collapse = ' ')
+}
+text <- pblapply(text, blank.removal)
+
+#Topic modeling
+library(lda)
+documents <- lexicalize(text)
+#특정단어가 문서 전체에서 몇 번 사용되었는지
+wc <- word.counts(documents$documents, documents$vocab)
+head(wc)
+
+set.seed(1234)
+fit <- lda.collapsed.gibbs.sampler(documents = documents$documents, K=4, vocab=documents$vocab,
+                                   num.iterations = 20, alpha=0.02, eta=0.02, initial=NULL,
+                                   burnin = 0, compute.log.likelihood = TRUE)
+plot(fit$log.likelihoods[1,])
+top.topic.words(fit$topics, 40, by.score=T)
