@@ -1,5 +1,5 @@
 library(tidyverse)
-setwd("C:/Users/dcng/Documents/ºñÅ¸¹Î_ÇÁ·ÎÁ§Æ®")
+setwd("C:/Users/dcng/Documents/ë¹„íƒ€ë¯¼_í”„ë¡œì íŠ¸")
 library(tm)
 library(qdap)
 library(caret)
@@ -17,7 +17,7 @@ rm(review1_score)
 review1 <- business %>% select(business_id, categories) %>%
   inner_join(review, by="business_id")
 
-#restaurant¸¸ filtering
+#restaurantë§Œ filtering
 restaurant <- review1 %>% filter(categories=="Restaurants")
 
 
@@ -28,7 +28,7 @@ text$doc <- mgsub(c("\\\\n","\\n","\\"),"",text$doc)
 text <- readRDS("sentiment_rest_text_0312.rds")
 
 
-#ÅØ½ºÆ® ³ª´©±â
+#í…ìŠ¤íŠ¸ ë‚˜ëˆ„ê¸°
 text1 <- text[1:100000,]
 text2 <- text[100001:300000,]
 text3 <- text[300001:500000,]
@@ -102,20 +102,38 @@ result7 <- text_word7 %>% inner_join(get_sentiments('bing')) %>%
 result7 <- result7[c(1,4)]
 result7
 
-#text¿¡ ´ëÇÑ °¨Á¤ºĞ¼® °á°ú ÇÏ³ª·Î ÇÕÄ¡±â
+#textì— ëŒ€í•œ ê°ì •ë¶„ì„ ê²°ê³¼ í•˜ë‚˜ë¡œ í•©ì¹˜ê¸°
 result <- rbind(result1, result2, result3, result4, result5, result6, result7)
 
-#restaurant¿¡ ´ëÇÑ review µ¥ÀÌÅÍ ºÒ·¯¿À±â
+#restaurantì— ëŒ€í•œ review ë°ì´í„° ë¶ˆëŸ¬ì˜¤ê¸°
 review <- readRDS("join_restaurant_0312.rds")
 str(review)
 
-#joinÀ» À§ÇØ reviewµ¥ÀÌÅÍ¿¡ ÀÎµ¦½º ¿­ Ãß°¡ÇÏ±â
+#joinì„ ìœ„í•´ reviewë°ì´í„°ì— ì¸ë±ìŠ¤ ì—´ ì¶”ê°€í•˜ê¸°
 review <- review %>% mutate(index=1:nrow(review))
 
-#°¨Á¤ºĞ¼® °á°ú¿Í review Á¶ÀÎÇÏ±â
+#ê°ì •ë¶„ì„ ê²°ê³¼ì™€ review ì¡°ì¸í•˜ê¸°
 review <- review %>% inner_join(result, by=c("index"="id"))
 review <- review %>% rename(sentiment=score)
 str(review)
 
-#rdsÆÄÀÏ·Î ÀúÀå
+#rdsíŒŒì¼ë¡œ ì €ì¥
 saveRDS(review, "restaurant_review.rds")
+
+##ê°ì •ì ìˆ˜ íƒìƒ‰
+ggplot(review, aes(sentiment))+geom_histogram(binwidth=1)+ggtitle("sentiment ë¶„í¬")
+ggplot(review, aes(sentiment))+geom_histogram(binwidth=1)+ggtitle("sentiment ë¶„í¬_outlier")+
+  coord_cartesian(xlim=c(-50,-15), ylim=c(0,100))
+ggplot(review, aes(sentiment))+geom_histogram(binwidth=1)+ggtitle("sentiment ë¶„í¬_outlier")+
+  coord_cartesian(xlim=c(30,90), ylim=c(0,100))
+
+
+#sentiment normalization
+normalize <- function(x) {
+  return((x-min(x))/(max(x)-min(x)))
+}
+
+score <- normalize(review$sentiment)
+hist(score)
+review$sentiment <- normalize(review$sentiment)
+review$sentiment <- review$sentiment*4+1
