@@ -137,3 +137,133 @@ score <- normalize(review$sentiment)
 hist(score)
 review$sentiment <- normalize(review$sentiment)
 review$sentiment <- review$sentiment*4+1
+
+
+
+
+
+####review2####
+
+
+library(tidyverse)
+setwd("C:/Users/dcng/Documents/비타민_프로젝트")
+library(tm)
+library(qdap)
+library(caret)
+library(tidytext)
+
+#review, business
+review <- readRDS("review2_text.rds")
+review2_score <- readRDS("review2_score.rds")
+business <- readRDS('business.rds')
+review$business_id <- review2_score$business_id
+review$stars <- review2_score$stars
+rm(review1_score)
+
+#join
+review2 <- business %>% select(business_id, categories) %>%
+  inner_join(review, by="business_id")
+
+#restaurant만 filtering
+restaurant <- review2 %>% filter(categories=="Restaurants")
+
+#restaurant&review 조인 데이터프레임 저장
+saveRDS(restaurant, "join_restaurant_review2.rds")
+
+text <- data_frame(id=1:nrow(restaurant), doc=restaurant$text)
+text$doc <- mgsub(c("\\\\n","\\n","\\"),"",text$doc)
+
+
+
+#텍스트가 커서 한번에 감정분석 시행이 안되므로 나누어서 진행
+
+
+#text1
+text1 <- text[1:200000,]
+text_word1 <- text1 %>% unnest_tokens(word, doc)
+
+result1 <- text_word1 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result1 <- result1[c(1,4)]
+result1
+rm(text_word1)
+rm(text1)
+
+#text2
+text2 <- text[200001:400000,]
+text_word2 <- text2 %>% unnest_tokens(word, doc)
+
+result2 <- text_word2 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result2 <- result2[c(1,4)]
+result2
+rm(text_word2)
+rm(text2)
+
+#text3
+text3 <- text[400001:600000,]
+text_word3 <- text3 %>% unnest_tokens(word, doc)
+
+result3 <- text_word3 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result3 <- result3[c(1,4)]
+result3
+rm(text_word3)
+rm(text3)
+
+#text4
+text4 <- text[600001:800000,]
+text_word4 <- text4 %>% unnest_tokens(word, doc)
+
+result4 <- text_word4 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result4 <- result4[c(1,4)]
+result4
+rm(text_word4)
+rm(text4)
+
+
+#text5
+text5 <- text[800001:1000000,]
+text_word5 <- text5 %>% unnest_tokens(word, doc)
+
+result5 <- text_word5 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result5 <- result5[c(1,4)]
+result5
+rm(text_word5)
+rm(text5)
+
+#text6
+text6 <- text[1000001:1196277,]
+text_word6 <- text6 %>% unnest_tokens(word, doc)
+
+result6 <- text_word6 %>% inner_join(get_sentiments('bing')) %>%
+  count(word, id, sentiment) %>% spread(sentiment, n, fill=0) %>%
+  group_by(id) %>% summarise(pos.sum=sum(positive), neg.sum=sum(negative), score=pos.sum-neg.sum)
+result6 <- result6[c(1,4)]
+result6
+rm(text_word6)
+rm(text6)
+
+
+
+#text에 대한 감정분석 결과 하나로 합치기
+result <- rbind(result1, result2, result3, result4, result5, result6)
+
+
+#join을 위해 review데이터에 인덱스 열 추가하기
+review <- restaurant %>% mutate(index=1:nrow(restaurant))
+
+#감정분석 결과와 review 조인하기
+review <- review %>% inner_join(result, by=c("index"="id"))
+review <- review %>% rename(sentiment=score)
+str(review)
+
+#rds파일로 저장
+saveRDS(review, "restaurant_review2.rds")
